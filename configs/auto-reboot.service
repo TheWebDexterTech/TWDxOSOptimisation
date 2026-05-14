@@ -1,7 +1,8 @@
 [Unit]
 Description=Reboot if a kernel update is pending
+ConditionPathExists=/var/run/reboot-required
 After=network.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -c 'if [ -f /var/run/reboot-required ]; then /sbin/shutdown -r +1 "Rebooting: kernel update pending"; fi'
+ExecStart=/sbin/shutdown -r +1 "Rebooting: kernel update pending"
