@@ -44,10 +44,7 @@ REPO_URL="https://raw.githubusercontent.com/thewebdexter/VM-auto-security/main"
 # ── Interactive Terminal UI ───────────────────────────────────────────────────
 step "Configuration Menu"
 
-# Only prompt if we have access to the terminal and variables aren't already set
 if [ -c /dev/tty ]; then
-    
-    # 1. System Cleanup
     if [ -z "${ENABLE_CLEANUP:-}" ]; then
         echo -e "${BLUE}? Would you like to enable automated system cleanup? (Removes old packages and trims logs)${NC}"
         echo -e "  [y/N]: \c"
@@ -59,7 +56,6 @@ if [ -c /dev/tty ]; then
         fi
     fi
 
-    # 2. Schedule Configurator
     if [ -z "${CRON_SCHEDULE:-}" ]; then
         echo ""
         echo -e "${BLUE}? How often should WordPress updates (and cleanup) run?${NC}"
@@ -96,15 +92,8 @@ if [ -c /dev/tty ]; then
     fi
 fi
 
-# Fallbacks in case /dev/tty fails or running fully headless
 ENABLE_CLEANUP="${ENABLE_CLEANUP:-true}"
-CRON_SCHEDULE="${CRON_SCHEDULE:-0 3 * * 0}" # Default to Weekly Sunday 3AM
-
-# Extract hour/dow for the legacy template variables if needed
-WP_CRON_HOUR=$(echo "$CRON_SCHEDULE" | awk '{print $2}')
-WP_CRON_DOW=$(echo "$CRON_SCHEDULE" | awk '{print $5}')
-[[ "$WP_CRON_HOUR" == "*" ]] && WP_CRON_HOUR="0"
-[[ "$WP_CRON_DOW" == "*" ]] && WP_CRON_DOW="0"
+CRON_SCHEDULE="${CRON_SCHEDULE:-0 3 * * 0}"
 
 # ── Preflight ─────────────────────────────────────────────────────────────────
 step "Preflight Checks"
@@ -124,19 +113,20 @@ if [[ ! -f "$WP_PATH/wp-includes/version.php" ]]; then
     warn "Could not find WordPress at $WP_PATH. Cron job will be installed but may fail."
 fi
 
-# ── 1. unattended-upgrades ────────────────────────────────────────────────────
-step "OS auto-updates (unattended-upgrades)"
-apt-get install -y -q unattended-upgrades update-notifier-common powermgmt-base
+# ── 1. OS Auto-Updates & Intrusion Prevention ─────────────────────────────────
+step "OS security (unattended-upgrades & fail2ban)"
+apt-get install -y -q unattended-upgrades update-notifier-common powermgmt-base fail2ban
 curl -fsSL "$REPO_URL/configs/50unattended-upgrades" -o /etc/apt/apt.conf.d/50unattended-upgrades
 curl -fsSL "$REPO_URL/configs/20auto-upgrades" -o /etc/apt/apt.conf.d/20auto-upgrades
 systemctl enable --now unattended-upgrades
-success "unattended-upgrades active"
+systemctl enable --now fail2ban
+success "unattended-upgrades & fail2ban active"
 
 # ── 2. needrestart ────────────────────────────────────────────────────────────
 step "Service auto-restart (needrestart)"
 apt-get install -y -q needrestart
 curl -fsSL "$REPO_URL/configs/needrestart.conf" -o /etc/needrestart/needrestart.conf
-success "needrestart configured (mode: automatic)"
+success "needrestart configured"
 
 # ── 3. Kernel-reboot timer ────────────────────────────────────────────────────
 step "Auto-reboot timer"
@@ -147,7 +137,7 @@ systemctl daemon-reload
 systemctl enable --now auto-reboot.timer
 success "auto-reboot.timer scheduled nightly at $REBOOT_TIME UTC"
 
-# ── 4. System Cleanup Generation ──────────────────────────────────────────────
+# ── 4. System Cleanup ─────────────────────────────────────────────────────────
 if [ "$ENABLE_CLEANUP" = "true" ]; then
     step "System Cleanup Script"
     cat << 'EOF' > /usr/local/bin/vm-system-cleanup.sh
@@ -165,7 +155,22 @@ EOF
     success "Generated /usr/local/bin/vm-system-cleanup.sh"
 fi
 
-# ── 5. WP-CLI ─────────────────────────────────────────────────────────────────
+# ── 5. Log Rotation ───────────────────────────────────────────────────────────
+step "Log Rotation Configuration"
+cat << 'EOF' > /etc/logrotate.d/vm-auto-security
+/var/log/wp-auto-update.log
+/var/log/vm-system-cleanup.log {
+    weekly
+    rotate 4
+    compress
+    delaycompress
+    missingok
+    notifempty
+}
+EOF
+success "Log rotation configured"
+
+# ── 6. WP-CLI ─────────────────────────────────────────────────────────────────
 step "WP-CLI"
 if command -v wp &>/dev/null; then
     info "WP-CLI already installed — skipping download"
@@ -175,7 +180,7 @@ else
     success "WP-CLI installed"
 fi
 
-# ── 6. WordPress update script + cron ────────────────────────────────────────
+# ── 7. WordPress update script + cron ─────────────────────────────────────────
 step "Applying Schedules"
 
 curl -fsSL "$REPO_URL/scripts/wp-auto-update.sh.tpl" | \
@@ -187,13 +192,9 @@ curl -fsSL "$REPO_URL/scripts/wp-auto-update.sh.tpl" | \
 chmod +x /usr/local/bin/wp-auto-update.sh
 touch "$LOG_FILE"
 
-# Clean old entries
 crontab -l 2>/dev/null | grep -v "wp-auto-update" | grep -v "vm-system-cleanup" | crontab -
-
-# Add WP updates
 (crontab -l 2>/dev/null; echo "$CRON_SCHEDULE /usr/local/bin/wp-auto-update.sh") | crontab -
 
-# Add Cleanup task (offset by 30 mins to avoid CPU spikes simultaneously)
 if [ "$ENABLE_CLEANUP" = "true" ]; then
     CLEANUP_SCHEDULE=$(echo "$CRON_SCHEDULE" | sed 's/^[^ ]*/30/')
     (crontab -l 2>/dev/null; echo "$CLEANUP_SCHEDULE /usr/local/bin/vm-system-cleanup.sh") | crontab -
@@ -210,8 +211,10 @@ echo
 printf "  %-28s %-14s\n" "Component" "Status"
 echo  "  ──────────────────────────────────────────"
 printf "  %-28s ${GREEN}%-14s${NC}\n" "OS security updates"  "✓ active"
+printf "  %-28s ${GREEN}%-14s${NC}\n" "Intrusion prevention" "✓ active"
 printf "  %-28s ${GREEN}%-14s${NC}\n" "Service restarts"     "✓ active"
 printf "  %-28s ${GREEN}%-14s${NC}\n" "Kernel reboot"        "✓ active"
+printf "  %-28s ${GREEN}%-14s${NC}\n" "Log rotation"         "✓ active"
 printf "  %-28s ${GREEN}%-14s${NC}\n" "WP auto-updates"      "✓ active ($CRON_SCHEDULE)"
 if [ "$ENABLE_CLEANUP" = "true" ]; then
 printf "  %-28s ${GREEN}%-14s${NC}\n" "System cleanup"       "✓ active"
