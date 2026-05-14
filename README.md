@@ -1,6 +1,6 @@
 # VM-Auto-security
 
-Hands-off maintenance for headless WordPress servers on Ubuntu 24.04. Set it up once and forget about it — security patches, bug fixes, service restarts, kernel reboots, system cleanup, and WordPress updates all happen automatically.
+Hands-off maintenance for headless WordPress servers on Ubuntu 24.04. Set it up once and forget about it — security patches, bug fixes, service restarts, kernel reboots, system cleanup, log rotation, intrusion prevention, and WordPress updates all happen automatically.
 
 Built for lean cloud setups where you want the server to take care of itself. 
 
@@ -13,10 +13,12 @@ Built for lean cloud setups where you want the server to take care of itself.
 | Layer | Tool | When |
 |---|---|---|
 | OS security patches + bug fixes | `unattended-upgrades` | Daily |
+| Intrusion Prevention (SSH brute-force protection) | `fail2ban` | Always Active |
 | Restart services after library updates | `needrestart` | After every `apt` run |
 | Reboot if a kernel update is pending | systemd timer | Nightly (default 03:30 UTC) |
-| Update WP core, plugins, themes | WP-CLI + cron | Configurable (Default: Weekly) |
 | System Cleanup (apt caches & logs) | bash + cron | Configurable (Default: Weekly) |
+| Log Rotation (compress & clean old logs) | `logrotate` | Weekly |
+| Update WP core, plugins, themes, and DB Optimize | WP-CLI + cron | Configurable (Default: Weekly) |
 
 ---
 
@@ -97,6 +99,9 @@ sudo WP_PATH=/var/www/mysite WP_USER=nginx ENABLE_CLEANUP=true bash install.sh
 # OS updater running?
 systemctl status unattended-upgrades
 
+# Intrusion prevention active?
+systemctl status fail2ban
+
 # Test a dry run
 unattended-upgrade --dry-run
 
@@ -118,7 +123,7 @@ crontab -l
 | What | Where |
 | --- | --- |
 | OS updates | `/var/log/unattended-upgrades/unattended-upgrades.log` |
-| dpkg changes | `/var/log/unattended-upgrades/unattended-upgrades-dpkg.log` |
+| Intrusion blocks | `/var/log/fail2ban.log` |
 | WP updates | `/var/log/wp-auto-update.log` |
 | System Cleanup | `/var/log/vm-system-cleanup.log` |
 
@@ -127,9 +132,9 @@ crontab -l
 ## Notes
 
 * **Reboots** only happen when a kernel update is actually pending (`/var/run/reboot-required`). Most nightly checks will do nothing.
-* **WP plugin updates** flush the object cache automatically, but occasionally major updates can break a site. Check the log if you're actively developing.
+* **WP plugin updates** flush the object cache and optimize the database automatically, but occasionally major updates can break a site. Check the log if you're actively developing.
 * **Cloudflared / tunnel daemons** reconnect automatically on reboot as long as they're enabled as systemd services.
-* The installer does not touch your web server, database, or WordPress files directly — only system-level tooling is configured.
+* The installer does not touch your web server, database (other than WP native optimization), or WordPress files directly — only system-level tooling is configured.
 
 ---
 
@@ -146,13 +151,16 @@ systemctl disable --now auto-reboot.timer
 rm /etc/systemd/system/auto-reboot.{service,timer}
 systemctl daemon-reload
 
-# Disable unattended-upgrades (optional — it's a standard Ubuntu package)
-systemctl disable --now unattended-upgrades
+# Disable unattended-upgrades & fail2ban (optional — standard Ubuntu packages)
+systemctl disable --now unattended-upgrades fail2ban
 
 # Remove scripts and WP-CLI
-rm /usr/local/bin/wp /usr/local/bin/wp-auto-update.sh /usr/local/bin/vm-system-cleanup.sh
+rm /usr/local/bin/wp /usr/local/bin/wp-auto-update.sh /usr/local/bin/vm-system-cleanup.sh /etc/logrotate.d/vm-auto-security
 
 ```
+
+---
+
 ## License
 
 MIT
