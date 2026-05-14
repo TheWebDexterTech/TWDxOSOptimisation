@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 # wp-auto-update.sh
 # Installed by wp-automaint — https://github.com/thewebdexter/VM-auto-security
 
@@ -13,5 +14,6 @@ LOG="__LOG_FILE__"
     sudo -u "$WP_USER" wp --path="$WP_PATH" plugin update --all
     sudo -u "$WP_USER" wp --path="$WP_PATH" theme update --all
     sudo -u "$WP_USER" wp --path="$WP_PATH" core language update
+    sudo -u "$WP_USER" wp --path="$WP_PATH" cache flush
     echo "=== done ==="
 } >> "$LOG" 2>&1
