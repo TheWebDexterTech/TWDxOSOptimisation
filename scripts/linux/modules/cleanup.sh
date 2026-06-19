@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC1091,SC2034
 #
 # cleanup.sh — System Cleanup module for TWDx Linux Maintenance Toolkit
 #

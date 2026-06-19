@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC1091,SC2034
 #
 # user-audit.sh — User & Permission Audit module for TWDx Linux Maintenance Toolkit
 #

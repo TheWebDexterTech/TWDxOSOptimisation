@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034
 #
 # common.sh — Shared library for TWDx Linux Maintenance Toolkit
 #

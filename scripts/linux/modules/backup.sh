@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC1091,SC2034
 #
 # backup.sh — Backup & Recovery module for TWDx Linux Maintenance Toolkit
 #
@@ -177,7 +178,8 @@ _backup_system_configs() {
 _backup_packages_list() {
   twdx_subsection "2. Installed Packages List"
 
-  local pkg_file="${BACKUP_DIR}/packages-$(date +%Y%m%d).txt"
+  local pkg_file
+  pkg_file="${BACKUP_DIR}/packages-$(date +%Y%m%d).txt"
   local staging_pkg="${BACKUP_STAGING}/packages.txt"
   : > "$staging_pkg"
 

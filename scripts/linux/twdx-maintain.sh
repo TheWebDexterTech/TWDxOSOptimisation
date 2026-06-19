@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC1091,SC2034
 #
 # twdx-maintain.sh — TWDx Linux Maintenance Toolkit
 #
@@ -85,7 +86,6 @@ done
 # ---------------------------------------------------------------------------
 # Source shared library
 # ---------------------------------------------------------------------------
-# shellcheck source=lib/common.sh
 source "$SCRIPT_DIR/lib/common.sh"
 
 twdx_require_root

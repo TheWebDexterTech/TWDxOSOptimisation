@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC1091,SC2034
 #
 # network-audit.sh — Network security auditing module for TWDx Linux Maintenance Toolkit
 #

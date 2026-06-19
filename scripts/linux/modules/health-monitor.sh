@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC1091,SC2034
 #
 # health-monitor.sh — System health monitoring module for TWDx Linux Maintenance Toolkit
 #
