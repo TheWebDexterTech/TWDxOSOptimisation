@@ -6,3 +6,6 @@
 dist/
 node_modules/
 semgrep-findings.json
+
+# Windows — NTFS alternate-data-stream marker left on browser-downloaded files
+*:Zone.Identifier
