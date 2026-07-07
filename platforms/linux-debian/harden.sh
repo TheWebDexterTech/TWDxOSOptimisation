@@ -1,16 +1,16 @@
 #!/bin/bash
 # =============================================================================
-# TWDxWordPressServerSecurity — Server Hardening
-# https://github.com/TheWebDexterTech/TWDxWordPressServerSecurity
+# TWDxOSOptimisation — Linux (Debian/Ubuntu) Server Hardening
+# https://github.com/TheWebDexterTech/TWDxOSOptimisation
 #
 # Hardens the host OS: SSH daemon (drop-in config), kernel/network sysctls,
 # and UFW firewall. Run after install.sh — safe to re-run (idempotent).
 #
 # Usage:
-#   sudo bash scripts/harden.sh [--dry-run] [--help]
+#   sudo bash harden.sh [--dry-run] [--help]
 #
 # Headless:
-#   sudo SSH_PORT=22 ENABLE_UFW=true bash scripts/harden.sh
+#   sudo SSH_PORT=22 ENABLE_UFW=true bash harden.sh
 #
 # Tested: Ubuntu 24.04 LTS — aarch64 + x86_64
 # License: MIT
@@ -31,10 +31,10 @@ dry_run() { echo -e "${YELLOW}[dry-run]${NC}  Would: $*"; }
 
 show_help() {
     cat <<'EOF'
-TWDxWordPressServerSecurity — Server Hardening
+TWDxOSOptimisation — Linux (Debian/Ubuntu) Server Hardening
 
 Usage:
-  sudo bash scripts/harden.sh [--dry-run|--check] [--help|-h]
+  sudo bash harden.sh [--dry-run|--check] [--help|-h]
 
 Environment variables:
   SSH_PORT    SSH port to allow through UFW         [22]
@@ -44,16 +44,16 @@ Environment variables:
   DRY_RUN     Preview without applying              [false]
 
 Examples:
-  sudo bash scripts/harden.sh
-  sudo bash scripts/harden.sh --dry-run
-  sudo SSH_PORT=2222 OPEN_HTTP=false bash scripts/harden.sh
+  sudo bash harden.sh
+  sudo bash harden.sh --dry-run
+  sudo SSH_PORT=2222 OPEN_HTTP=false bash harden.sh
 EOF
 }
 
 # ── Branding ──────────────────────────────────────────────────────────────────
 echo -e "${CYAN}${BOLD}"
 echo "  ================================================================="
-echo "        TWDxWordPressServerSecurity — Server Hardening             "
+echo "   TWDxOSOptimisation — Linux (Debian/Ubuntu) Server Hardening      "
 echo "                                                                   "
 echo "               Developed by: TheWebDexter.com                      "
 echo "  ================================================================="
@@ -114,7 +114,7 @@ VER=$(lsb_release -sr 2>/dev/null || echo "0")
 # ── 1. SSH Daemon Hardening (drop-in /etc/ssh/sshd_config.d) ─────────────────
 step "SSH Daemon Hardening"
 
-SSH_DROPIN="/etc/ssh/sshd_config.d/99-twdxwpss-hardening.conf"
+SSH_DROPIN="/etc/ssh/sshd_config.d/99-twdxos-hardening.conf"
 
 if [[ "$DRY_RUN" == "true" ]]; then
     dry_run "write ${SSH_DROPIN} (CIS-aligned)"
@@ -146,7 +146,7 @@ else
     # This avoids mutating /etc/ssh/sshd_config and survives apt upgrades.
     mkdir -p /etc/ssh/sshd_config.d
     cat > "$SSH_DROPIN" <<'EOF'
-# TWDxWordPressServerSecurity — SSH hardening (CIS-aligned)
+# TWDxOSOptimisation — SSH hardening (CIS-aligned)
 # Loaded by sshd via Include /etc/ssh/sshd_config.d/*.conf
 # First match wins; this file is processed before the main sshd_config.
 
@@ -197,15 +197,15 @@ fi
 # ── 2. Kernel & Network Hardening ─────────────────────────────────────────────
 step "Kernel & Network Hardening (sysctl)"
 
-SYSCTL_CONF="/etc/sysctl.d/99-twdxwpss-hardening.conf"
+SYSCTL_CONF="/etc/sysctl.d/99-twdxos-hardening.conf"
 
 if [[ "$DRY_RUN" == "true" ]]; then
     dry_run "write ${SYSCTL_CONF}"
     dry_run "apply with: sysctl --system"
 else
     cat > "$SYSCTL_CONF" <<'EOF'
-# TWDxWordPressServerSecurity — kernel & network hardening
-# https://github.com/TheWebDexterTech/TWDxWordPressServerSecurity
+# TWDxOSOptimisation — kernel & network hardening
+# https://github.com/TheWebDexterTech/TWDxOSOptimisation
 # CIS Ubuntu 24.04 Benchmark §3 (Network) and §1.5 (Kernel) aligned.
 
 # ── IPv4 network hardening ──────────────────────────────────────────────────

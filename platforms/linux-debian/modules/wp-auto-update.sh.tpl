@@ -1,6 +1,7 @@
 #!/bin/bash
 # wp-auto-update.sh
-# Installed by TWDxWordPressServerSecurity — https://github.com/TheWebDexterTech/TWDxWordPressServerSecurity
+# Installed by TWDxOSOptimisation (Linux Debian/Ubuntu, optional WP-CLI module)
+# https://github.com/TheWebDexterTech/TWDxOSOptimisation
 #
 # Idempotent WordPress maintenance: core, plugin, theme, language updates,
 # cache flush, transient sweep, and DB optimize. Logs every step. Exits with
