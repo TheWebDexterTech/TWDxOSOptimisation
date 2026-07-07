@@ -2,9 +2,12 @@
 # Keep this list narrow — only files that are actively noisy or never
 # relevant to code work belong here. See CLAUDE.md for what each script does.
 
-# User-facing docs — repeated in CLAUDE.md, not implementation
-LICENSE
-README.md
+# Root-level user-facing docs — pure pitch/hub content, repeated in the root
+# CLAUDE.md, not implementation. Anchored with a leading "/" so this does NOT
+# match platforms/*/README.md — those carry real per-platform env-var/usage
+# spec content that IS relevant when working inside a platform folder.
+/LICENSE
+/README.md
 
 # Non-functional repo metadata
 .github/FUNDING.yml
