@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# macos-declutter.sh
+# declutter.sh (macOS)
 #
 # Goal: Help move a Mac closer to a "clean default" state by identifying
 # (and optionally removing/disabling) unused Homebrew packages, third-party
@@ -30,15 +30,15 @@
 #   - Xcode simulators now also live under ~/Library/Developer/CoreSimulator/Volumes/
 #
 # Usage:
-#   ./macos-declutter.sh                       # report only
-#   ./macos-declutter.sh --apply               # safe cleanup (brew, caches, logs, trash)
-#   ./macos-declutter.sh --apply --os-updates  # also install recommended macOS updates
+#   ./declutter.sh                       # report only
+#   ./declutter.sh --apply               # safe cleanup (brew, caches, logs, trash)
+#   ./declutter.sh --apply --os-updates  # also install recommended macOS updates
 #                                               #   (CAUTION: may trigger reboot)
-#   ./macos-declutter.sh --apply --aggressive  # interactively review unused apps,
+#   ./declutter.sh --apply --aggressive  # interactively review unused apps,
 #                                               #   brew leaves, third-party launch
 #                                               #   agents/daemons, and terminal-installed
 #                                               #   packages for removal
-#   ./macos-declutter.sh --cron                # non-interactive safe steps only
+#   ./declutter.sh --cron                # non-interactive safe steps only
 #
 set -uo pipefail
 

@@ -1,5 +1,5 @@
 [Unit]
-Description=TWDxWordPressServerSecurity — reboot if a kernel update is pending
+Description=TWDxOSOptimisation — reboot if a kernel update is pending
 ConditionPathExists=/var/run/reboot-required
 After=network.target
 

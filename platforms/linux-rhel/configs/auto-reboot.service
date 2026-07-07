@@ -1,0 +1,14 @@
+[Unit]
+Description=TWDxOSOptimisation — reboot if a pending update requires it (RHEL family)
+After=network.target
+
+[Service]
+Type=oneshot
+# `dnf needs-restarting -r` exits 0 if no reboot is needed, 1 if one is.
+# There is no RHEL-family equivalent of Debian's /var/run/reboot-required
+# flag file, so the check itself is embedded here rather than gated by
+# ConditionPathExists.
+ExecStart=/bin/bash -c '/usr/bin/dnf needs-restarting -r >/dev/null 2>&1; if [ "$?" -eq 1 ]; then /sbin/shutdown -r +1 "Rebooting: update requires restart"; fi'
+
+[Install]
+WantedBy=multi-user.target

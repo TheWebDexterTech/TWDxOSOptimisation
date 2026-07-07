@@ -1,21 +1,27 @@
 #!/bin/bash
 # wp-auto-update.sh
-# Installed by TWDxWordPressServerSecurity — https://github.com/TheWebDexterTech/TWDxWordPressServerSecurity
+# Installed by TWDxOSOptimisation (macOS, optional WP-CLI module)
+# https://github.com/TheWebDexterTech/TWDxOSOptimisation
 #
 # Idempotent WordPress maintenance: core, plugin, theme, language updates,
 # cache flush, transient sweep, and DB optimize. Logs every step. Exits with
-# the number of failed steps so cron MAILTO surfaces partial failures.
+# the number of failed steps.
+#
+# Intended for local WordPress dev on macOS (e.g. via MAMP/Herd) — this is
+# not the centerpiece of the macOS platform (see declutter.sh for that).
+# Run it manually, or wrap it in your own launchd job; install.sh does not
+# schedule this automatically.
 
 set -uo pipefail
 
 WP_PATH="__WP_PATH__"
 WP_USER="__WP_USER__"
 LOG="__LOG_FILE__"
-LOCK="/var/lock/wp-auto-update.lock"
+LOCK="/tmp/wp-auto-update.lock"
 
 # Single-instance guard: silently skip if another run is in progress.
 exec 9>"$LOCK"
-if ! flock -n 9; then
+if ! flock -n 9 2>/dev/null; then
     echo "[$(date -Iseconds)] skip: another wp-auto-update is running" >> "$LOG"
     exit 0
 fi
@@ -32,7 +38,11 @@ run() {
     fi
 }
 
-WP=(sudo -u "$WP_USER" wp --path="$WP_PATH")
+if [[ "$(whoami)" == "$WP_USER" ]]; then
+    WP=(wp --path="$WP_PATH")
+else
+    WP=(sudo -u "$WP_USER" wp --path="$WP_PATH")
+fi
 
 {
     echo ""

@@ -1,18 +1,18 @@
 #!/bin/bash
 # =============================================================================
-# TWDxWordPressServerSecurity — Server Hardening
-# https://github.com/TheWebDexterTech/TWDxWordPressServerSecurity
+# TWDxOSOptimisation — Linux (RHEL/Fedora/CentOS) Server Hardening
+# https://github.com/TheWebDexterTech/TWDxOSOptimisation
 #
 # Hardens the host OS: SSH daemon (drop-in config), kernel/network sysctls,
-# and UFW firewall. Run after install.sh — safe to re-run (idempotent).
+# and firewalld. Run after install.sh — safe to re-run (idempotent).
 #
 # Usage:
-#   sudo bash scripts/harden.sh [--dry-run] [--help]
+#   sudo bash harden.sh [--dry-run] [--help]
 #
 # Headless:
-#   sudo SSH_PORT=22 ENABLE_UFW=true bash scripts/harden.sh
+#   sudo SSH_PORT=22 ENABLE_FIREWALLD=true bash harden.sh
 #
-# Tested: Ubuntu 24.04 LTS — aarch64 + x86_64
+# Tested: Rocky Linux 9, AlmaLinux 9, Fedora 40 — x86_64 + aarch64
 # License: MIT
 # =============================================================================
 
@@ -31,29 +31,29 @@ dry_run() { echo -e "${YELLOW}[dry-run]${NC}  Would: $*"; }
 
 show_help() {
     cat <<'EOF'
-TWDxWordPressServerSecurity — Server Hardening
+TWDxOSOptimisation — Linux (RHEL/Fedora/CentOS) Server Hardening
 
 Usage:
-  sudo bash scripts/harden.sh [--dry-run|--check] [--help|-h]
+  sudo bash harden.sh [--dry-run|--check] [--help|-h]
 
 Environment variables:
-  SSH_PORT    SSH port to allow through UFW         [22]
-  ENABLE_UFW  Install and enable UFW firewall       [true]
-  OPEN_HTTP   Allow inbound port 80                 [true]
-  OPEN_HTTPS  Allow inbound port 443                [true]
-  DRY_RUN     Preview without applying              [false]
+  SSH_PORT          SSH port to allow through firewalld  [22]
+  ENABLE_FIREWALLD  Enable and configure firewalld        [true]
+  OPEN_HTTP         Allow inbound port 80                 [true]
+  OPEN_HTTPS        Allow inbound port 443                [true]
+  DRY_RUN           Preview without applying              [false]
 
 Examples:
-  sudo bash scripts/harden.sh
-  sudo bash scripts/harden.sh --dry-run
-  sudo SSH_PORT=2222 OPEN_HTTP=false bash scripts/harden.sh
+  sudo bash harden.sh
+  sudo bash harden.sh --dry-run
+  sudo SSH_PORT=2222 OPEN_HTTP=false bash harden.sh
 EOF
 }
 
 # ── Branding ──────────────────────────────────────────────────────────────────
 echo -e "${CYAN}${BOLD}"
 echo "  ================================================================="
-echo "        TWDxWordPressServerSecurity — Server Hardening             "
+echo "  TWDxOSOptimisation — Linux (RHEL/Fedora/CentOS) Server Hardening   "
 echo "                                                                   "
 echo "               Developed by: TheWebDexter.com                      "
 echo "  ================================================================="
@@ -72,7 +72,7 @@ done
 
 # ── Default Configuration ─────────────────────────────────────────────────────
 SSH_PORT="${SSH_PORT:-22}"
-ENABLE_UFW="${ENABLE_UFW:-true}"
+ENABLE_FIREWALLD="${ENABLE_FIREWALLD:-true}"
 OPEN_HTTP="${OPEN_HTTP:-true}"
 OPEN_HTTPS="${OPEN_HTTPS:-true}"
 
@@ -92,34 +92,48 @@ validate_bool() {
 }
 
 step "Validating configuration"
-validate_port "$SSH_PORT"   "SSH_PORT"
-validate_bool "$ENABLE_UFW" "ENABLE_UFW"
-validate_bool "$OPEN_HTTP"  "OPEN_HTTP"
-validate_bool "$OPEN_HTTPS" "OPEN_HTTPS"
+validate_port "$SSH_PORT"         "SSH_PORT"
+validate_bool "$ENABLE_FIREWALLD" "ENABLE_FIREWALLD"
+validate_bool "$OPEN_HTTP"        "OPEN_HTTP"
+validate_bool "$OPEN_HTTPS"       "OPEN_HTTPS"
 success "All inputs validated"
 
 # ── Preflight ─────────────────────────────────────────────────────────────────
 step "Preflight Checks"
 [[ $EUID -ne 0 ]] && error "Please run as root (or use sudo)."
 
-if [[ "$DRY_RUN" != "true" ]]; then
-    export DEBIAN_FRONTEND=noninteractive
-    command -v lsb_release &>/dev/null || apt-get install -y -q lsb-release
+OS_ID="unknown"
+OS_VERSION="0"
+if [[ -f /etc/os-release ]]; then
+    # shellcheck disable=SC1091
+    . /etc/os-release
+    OS_ID="${ID:-unknown}"
+    OS_VERSION="${VERSION_ID:-0}"
 fi
+case "$OS_ID" in
+    rhel|centos|rocky|almalinux|fedora) : ;;
+    *) warn "Tested on RHEL/CentOS/Rocky/AlmaLinux/Fedora — proceeding anyway on ${OS_ID} ${OS_VERSION}" ;;
+esac
 
-OS=$(lsb_release -si 2>/dev/null || echo "Unknown")
-VER=$(lsb_release -sr 2>/dev/null || echo "0")
-[[ "$OS" != "Ubuntu" ]] && warn "Tested on Ubuntu — proceeding anyway on ${OS} ${VER}"
+if command -v getenforce &>/dev/null; then
+    SELINUX_MODE=$(getenforce)
+    info "SELinux mode: ${SELINUX_MODE}"
+    if [[ "$SELINUX_MODE" == "Enforcing" ]]; then
+        warn "SELinux is Enforcing. This script never changes SELinux mode or policy —"
+        warn "if a hardening step is blocked, review 'audit2why < /var/log/audit/audit.log'"
+        warn "and add a targeted policy module rather than disabling enforcement."
+    fi
+fi
 
 # ── 1. SSH Daemon Hardening (drop-in /etc/ssh/sshd_config.d) ─────────────────
 step "SSH Daemon Hardening"
 
-SSH_DROPIN="/etc/ssh/sshd_config.d/99-twdxwpss-hardening.conf"
+SSH_DROPIN="/etc/ssh/sshd_config.d/99-twdxos-hardening.conf"
 
 if [[ "$DRY_RUN" == "true" ]]; then
     dry_run "write ${SSH_DROPIN} (CIS-aligned)"
     dry_run "validate config with: sshd -t"
-    dry_run "systemctl reload ssh"
+    dry_run "systemctl reload sshd"
 else
     # Safety: warn if no non-root user has an authorized_keys file (lockout risk).
     KEY_FOUND=false
@@ -143,10 +157,10 @@ else
     fi
 
     # Modern sshd_config.d drop-in: first match wins, applied before main config.
-    # This avoids mutating /etc/ssh/sshd_config and survives apt upgrades.
+    # This avoids mutating /etc/ssh/sshd_config and survives dnf upgrades.
     mkdir -p /etc/ssh/sshd_config.d
     cat > "$SSH_DROPIN" <<'EOF'
-# TWDxWordPressServerSecurity — SSH hardening (CIS-aligned)
+# TWDxOSOptimisation — SSH hardening (CIS-aligned)
 # Loaded by sshd via Include /etc/ssh/sshd_config.d/*.conf
 # First match wins; this file is processed before the main sshd_config.
 
@@ -190,23 +204,23 @@ EOF
     fi
     rm -f /tmp/sshd-test-err
 
-    systemctl reload ssh
+    systemctl reload sshd
     success "SSH daemon hardened via drop-in (${SSH_DROPIN})"
 fi
 
 # ── 2. Kernel & Network Hardening ─────────────────────────────────────────────
 step "Kernel & Network Hardening (sysctl)"
 
-SYSCTL_CONF="/etc/sysctl.d/99-twdxwpss-hardening.conf"
+SYSCTL_CONF="/etc/sysctl.d/99-twdxos-hardening.conf"
 
 if [[ "$DRY_RUN" == "true" ]]; then
     dry_run "write ${SYSCTL_CONF}"
     dry_run "apply with: sysctl --system"
 else
     cat > "$SYSCTL_CONF" <<'EOF'
-# TWDxWordPressServerSecurity — kernel & network hardening
-# https://github.com/TheWebDexterTech/TWDxWordPressServerSecurity
-# CIS Ubuntu 24.04 Benchmark §3 (Network) and §1.5 (Kernel) aligned.
+# TWDxOSOptimisation — kernel & network hardening
+# https://github.com/TheWebDexterTech/TWDxOSOptimisation
+# CIS RHEL 9 Benchmark §3 (Network) and §1.5 (Kernel) aligned.
 
 # ── IPv4 network hardening ──────────────────────────────────────────────────
 net.ipv4.tcp_syncookies = 1
@@ -253,39 +267,31 @@ EOF
     success "Kernel & network hardening applied (${SYSCTL_CONF})"
 fi
 
-# ── 3. UFW Firewall ───────────────────────────────────────────────────────────
-if [[ "$ENABLE_UFW" == "true" ]]; then
-    step "UFW Firewall Setup"
+# ── 3. firewalld ───────────────────────────────────────────────────────────────
+if [[ "$ENABLE_FIREWALLD" == "true" ]]; then
+    step "firewalld Setup"
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        dry_run "apt-get install ufw"
-        dry_run "ufw allow ${SSH_PORT}/tcp"
-        [[ "$OPEN_HTTP"  == "true" ]] && dry_run "ufw allow 80/tcp"
-        [[ "$OPEN_HTTPS" == "true" ]] && dry_run "ufw allow 443/tcp"
-        dry_run "ufw default deny incoming"
-        dry_run "ufw default allow outgoing"
-        dry_run "ufw logging low"
-        dry_run "ufw --force enable"
+        dry_run "dnf install firewalld"
+        dry_run "systemctl enable --now firewalld"
+        dry_run "firewall-cmd --permanent --add-port=${SSH_PORT}/tcp"
+        [[ "$OPEN_HTTP"  == "true" ]] && dry_run "firewall-cmd --permanent --add-service=http"
+        [[ "$OPEN_HTTPS" == "true" ]] && dry_run "firewall-cmd --permanent --add-service=https"
+        dry_run "firewall-cmd --reload"
     else
-        apt-get install -y -q ufw
+        dnf install -y -q firewalld
+        systemctl enable --now firewalld
 
-        # Force IPv6 on (UFW default on 24.04, but make it explicit & idempotent).
-        sed -i 's|^IPV6=.*|IPV6=yes|' /etc/default/ufw
+        firewall-cmd --permanent --add-port="${SSH_PORT}/tcp"
+        [[ "$OPEN_HTTP"  == "true" ]] && firewall-cmd --permanent --add-service=http
+        [[ "$OPEN_HTTPS" == "true" ]] && firewall-cmd --permanent --add-service=https
+        firewall-cmd --reload
 
-        ufw allow "${SSH_PORT}/tcp"
-        [[ "$OPEN_HTTP"  == "true" ]] && ufw allow 80/tcp
-        [[ "$OPEN_HTTPS" == "true" ]] && ufw allow 443/tcp
-
-        ufw default deny incoming
-        ufw default allow outgoing
-        ufw logging low
-        ufw --force enable
-
-        success "UFW enabled (SSH:${SSH_PORT} HTTP:${OPEN_HTTP} HTTPS:${OPEN_HTTPS})"
+        success "firewalld enabled (SSH:${SSH_PORT} HTTP:${OPEN_HTTP} HTTPS:${OPEN_HTTPS})"
         warn "──────────────────────────────────────────────────────────"
         warn "NEXT STEP (Cloudflare Tunnel users only):"
         warn "Once your tunnel is confirmed working, close the SSH port:"
-        warn "  sudo ufw delete allow ${SSH_PORT}/tcp && sudo ufw reload"
+        warn "  sudo firewall-cmd --permanent --remove-port=${SSH_PORT}/tcp && sudo firewall-cmd --reload"
         warn "Also remove the SSH ingress rule from your cloud provider"
         warn "VCN / Security Group settings (e.g. Oracle Cloud Dashboard)."
         warn "──────────────────────────────────────────────────────────"
@@ -309,13 +315,13 @@ echo  "  ───────────────────────�
 if [[ "$DRY_RUN" == "true" ]]; then
     printf "  %-28s ${YELLOW}%-14s${NC}\n" "SSH hardening"        "dry-run"
     printf "  %-28s ${YELLOW}%-14s${NC}\n" "Kernel network stack" "dry-run"
-    [[ "$ENABLE_UFW" == "true" ]] && \
-        printf "  %-28s ${YELLOW}%-14s${NC}\n" "UFW firewall" "dry-run"
+    [[ "$ENABLE_FIREWALLD" == "true" ]] && \
+        printf "  %-28s ${YELLOW}%-14s${NC}\n" "firewalld" "dry-run"
 else
     printf "  %-28s ${GREEN}%-14s${NC}\n" "SSH hardening"        "✓ active"
     printf "  %-28s ${GREEN}%-14s${NC}\n" "Kernel network stack" "✓ active"
-    [[ "$ENABLE_UFW" == "true" ]] && \
-        printf "  %-28s ${GREEN}%-14s${NC}\n" "UFW firewall" "✓ active"
+    [[ "$ENABLE_FIREWALLD" == "true" ]] && \
+        printf "  %-28s ${GREEN}%-14s${NC}\n" "firewalld" "✓ active"
 fi
 echo
 echo -e "${CYAN}  Thank you for using automation by TheWebDexter.com${NC}"

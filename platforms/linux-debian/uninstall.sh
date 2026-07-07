@@ -1,7 +1,7 @@
 #!/bin/bash
 # =============================================================================
-# TWDxWordPressServerSecurity — Uninstaller
-# https://github.com/TheWebDexterTech/TWDxWordPressServerSecurity
+# TWDxOSOptimisation — Linux (Debian/Ubuntu) Uninstaller
+# https://github.com/TheWebDexterTech/TWDxOSOptimisation
 # =============================================================================
 
 set -euo pipefail
@@ -18,19 +18,19 @@ error()   { echo -e "${RED}[fail]${NC}  $*" >&2; exit 1; }
 
 echo -e "${CYAN}${BOLD}"
 echo "  ================================================================="
-echo "       TWDxWordPressServerSecurity — Uninstaller                   "
+echo "     TWDxOSOptimisation — Linux (Debian/Ubuntu) Uninstaller         "
 echo "  ================================================================="
 echo -e "${NC}"
 
-warn "This will remove all TWDxWordPressServerSecurity components."
+warn "This will remove all TWDxOSOptimisation (Linux Debian/Ubuntu) components."
 echo -e "  Continue? [y/N]: \c"
 read -r confirm
 [[ "$confirm" =~ ^[Yy]$ ]] || { info "Aborted."; exit 0; }
 
 # Cron jobs
-if [[ -f /etc/cron.d/twdxwpss ]]; then
-    rm -f /etc/cron.d/twdxwpss
-    success "Removed /etc/cron.d/twdxwpss"
+if [[ -f /etc/cron.d/twdxos ]]; then
+    rm -f /etc/cron.d/twdxos
+    success "Removed /etc/cron.d/twdxos"
 fi
 
 # Systemd timer and service
@@ -53,7 +53,7 @@ if [[ "$rm_wp" =~ ^[Yy]$ ]]; then
 fi
 
 # Log rotation config
-rm -f /etc/logrotate.d/twdxwpss /etc/logrotate.d/vm-auto-security
+rm -f /etc/logrotate.d/twdxos /etc/logrotate.d/vm-auto-security
 success "Removed logrotate config"
 
 # fail2ban jail (we shipped it, we remove it)
@@ -76,15 +76,15 @@ if [[ "$rm_pkg" =~ ^[Yy]$ ]]; then
 fi
 
 # Kernel network hardening (harden.sh)
-if [[ -f /etc/sysctl.d/99-twdxwpss-hardening.conf ]]; then
-    rm -f /etc/sysctl.d/99-twdxwpss-hardening.conf
+if [[ -f /etc/sysctl.d/99-twdxos-hardening.conf ]]; then
+    rm -f /etc/sysctl.d/99-twdxos-hardening.conf
     sysctl --system > /dev/null
     success "Removed kernel hardening config and reloaded sysctl"
 fi
 
 # SSH drop-in (harden.sh, new style — just remove the file)
-if [[ -f /etc/ssh/sshd_config.d/99-twdxwpss-hardening.conf ]]; then
-    rm -f /etc/ssh/sshd_config.d/99-twdxwpss-hardening.conf
+if [[ -f /etc/ssh/sshd_config.d/99-twdxos-hardening.conf ]]; then
+    rm -f /etc/ssh/sshd_config.d/99-twdxos-hardening.conf
     systemctl reload ssh 2>/dev/null || true
     success "Removed SSH hardening drop-in"
 fi
@@ -111,7 +111,7 @@ if command -v ufw &>/dev/null && ufw status | grep -q "Status: active"; then
 fi
 
 echo
-echo -e "${GREEN}${BOLD}  TWDxWordPressServerSecurity has been removed.${NC}"
+echo -e "${GREEN}${BOLD}  TWDxOSOptimisation (Linux Debian/Ubuntu) has been removed.${NC}"
 echo -e "  Logs remain at /var/log/wp-auto-update.log and /var/log/vm-system-cleanup.log"
 echo -e "  Remove them manually if no longer needed."
 echo
