@@ -1,0 +1,47 @@
+# TWDxOSOptimisation — fail2ban jail.local (RHEL/Fedora/CentOS family)
+# https://github.com/TheWebDexterTech/TWDxOSOptimisation
+#
+# Requires the `fail2ban` package (from EPEL on RHEL/CentOS/Rocky/AlmaLinux;
+# available directly on Fedora). Drop-in tuning, ships with sshd
+# brute-force protection and a recidive jail that long-bans repeat
+# offenders. Re-install or edit and `systemctl reload fail2ban` to apply.
+
+[DEFAULT]
+# Trust loopback and private RFC1918 by default; add your VPN/office CIDRs here.
+ignoreip = 127.0.0.1/8 ::1 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+
+# Window in which `maxretry` failures will trigger a ban.
+findtime = 10m
+
+# How long an IP stays banned (1 hour for the default jails).
+bantime  = 1h
+
+# Bantime grows exponentially on repeat bans, capped at bantime.maxtime.
+bantime.increment = true
+bantime.factor    = 2
+bantime.maxtime   = 1w
+
+# How many failures within findtime before banning.
+maxretry = 5
+
+# Use systemd journal as the log backend (RHEL 8/9, Fedora default).
+backend  = systemd
+
+# firewalld is the default firewall backend on RHEL family (vs. UFW/nftables
+# on Debian) — use its rich-rules banaction instead of nftables-multiport.
+banaction = firewallcmd-rich-rules
+banaction_allports = firewallcmd-rich-rules
+
+[sshd]
+enabled  = true
+mode     = aggressive
+port     = ssh
+maxretry = 4
+
+# Long-ban repeat offenders that get re-banned multiple times.
+[recidive]
+enabled  = true
+logpath  = /var/log/fail2ban.log
+bantime  = 1w
+findtime = 1d
+maxretry = 3
