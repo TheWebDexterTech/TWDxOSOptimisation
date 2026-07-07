@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 # =============================================================================
-# TWDxWordPressServerSecurity — commit preflight
-# https://github.com/TheWebDexterTech/TWDxWordPressServerSecurity
+# TWDxOSOptimisation — commit preflight
+# https://github.com/TheWebDexterTech/TWDxOSOptimisation
 #
 # Runs three local checks before a commit lands on main (production):
-#   1. ShellCheck on every shell script  (matches CI)
-#   2. FILE_CHECKSUMS drift              (sha256 of configs/*, scripts/*.tpl
-#                                         must match install.sh:84)
+#   1. ShellCheck on every shell script across every Bash-based platform
+#      folder (matches CI)
+#   2. FILE_CHECKSUMS drift              (sha256 of every file referenced by
+#                                         each platforms/*/install.sh's own
+#                                         FILE_CHECKSUMS array)
 #   3. Secret scan on the staged diff    (AWS keys, GH tokens, OpenAI keys,
 #                                         PEM private keys)
+#
+# This script is generic across platforms — adding a new platform folder
+# with its own install.sh/FILE_CHECKSUMS requires zero edits here.
 #
 # One-time install:
 #   ln -sf ../../scripts/pre-commit.sh .git/hooks/pre-commit
@@ -30,48 +35,55 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
 # ── 1. ShellCheck ────────────────────────────────────────────────────────────
+# Recurses into every Bash-based platform folder (Windows ships PowerShell,
+# not Bash, so platforms/windows is naturally excluded by the *.sh glob).
 step "ShellCheck"
+mapfile -t sh_files < <(find platforms scripts -type f \( -name '*.sh' -o -name '*.sh.tpl' \) 2>/dev/null | sort)
+if ((${#sh_files[@]} == 0)); then
+    fail "no shell scripts found under platforms/ or scripts/ — check the working tree"
+fi
 if command -v shellcheck >/dev/null 2>&1; then
-    if ! shellcheck --severity=style --format=gcc install.sh uninstall.sh scripts/*.sh; then
+    if ! shellcheck --severity=style --format=gcc "${sh_files[@]}"; then
         fail "shellcheck reported issues — fix them before committing"
     fi
-    ok "shellcheck clean"
+    ok "shellcheck clean (${#sh_files[@]} files)"
 else
     warn "shellcheck not installed — skipping locally (CI will still run it)"
 fi
 
 # ── 2. FILE_CHECKSUMS drift ──────────────────────────────────────────────────
+# Loops over every platform's own install.sh and verifies each file its
+# FILE_CHECKSUMS array references still matches on disk. No hardcoded file
+# list here — each platform's install.sh is the registry of record.
 step "FILE_CHECKSUMS drift"
-shipped=(
-    configs/50unattended-upgrades
-    configs/20auto-upgrades
-    configs/needrestart.conf
-    configs/auto-reboot.service
-    configs/auto-reboot.timer.tpl
-    configs/fail2ban-jail.local
-    scripts/wp-auto-update.sh.tpl
-)
 drift=0
-for f in "${shipped[@]}"; do
-    [[ -f "$f" ]] || fail "shipped file missing from working tree: $f"
-    actual=$(sha256sum "$f" | awk '{print $1}')
-    registered=$(grep -E "\[\"$f\"\]=" install.sh | sed -E 's/.*"([a-f0-9]{64})".*/\1/' || true)
-    if [[ -z "$registered" ]]; then
-        echo "  $f → no FILE_CHECKSUMS entry in install.sh"
-        drift=1
-        continue
-    fi
-    if [[ "$actual" != "$registered" ]]; then
-        echo "  $f"
-        echo "    install.sh: $registered"
-        echo "    actual    : $actual"
-        drift=1
-    fi
+checked=0
+for platform_install in platforms/*/install.sh; do
+    [[ -f "$platform_install" ]] || continue
+    platform_dir="$(dirname "$platform_install")"
+    while IFS= read -r line; do
+        rel_path=$(sed -E 's/^\s*\["([^"]+)"\].*/\1/' <<< "$line")
+        registered=$(sed -E 's/.*"([a-f0-9]{64})".*/\1/' <<< "$line")
+        full_path="$platform_dir/$rel_path"
+        checked=$((checked + 1))
+        if [[ ! -f "$full_path" ]]; then
+            echo "  $full_path → referenced in $platform_install but missing from working tree"
+            drift=1
+            continue
+        fi
+        actual=$(sha256sum "$full_path" | awk '{print $1}')
+        if [[ "$actual" != "$registered" ]]; then
+            echo "  $full_path"
+            echo "    $platform_install: $registered"
+            echo "    actual              : $actual"
+            drift=1
+        fi
+    done < <(grep -E '^\s*\["[^"]+"\]=' "$platform_install" || true)
 done
 if (( drift == 1 )); then
-    fail "FILE_CHECKSUMS drift — update the registry at install.sh:84 before committing."
+    fail "FILE_CHECKSUMS drift — update the registry in the relevant platforms/*/install.sh before committing."
 fi
-ok "all ${#shipped[@]} shipped-file checksums match install.sh:84"
+ok "all $checked shipped-file checksums match their platform's install.sh"
 
 # ── 3. Secret scan on staged diff ────────────────────────────────────────────
 step "Secret scan (staged diff)"
