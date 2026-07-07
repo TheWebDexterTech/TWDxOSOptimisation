@@ -22,6 +22,7 @@ platforms/windows/
 ├── Uninstall.ps1                              # Removes scheduled task, installed files, SSH firewall rule
 ├── Harden.ps1                                  # Firewall hardening, RDP NLA, optional OpenSSH sshd_config edit
 ├── Declutter.ps1                               # Temp/WU-cache cleanup, DISM component cleanup, reboot-pending check
+├── PSScriptAnalyzerSettings.psd1                # Lint config (excludes PSAvoidUsingWriteHost — see below)
 ├── Configs/
 │   └── ScheduledTask-Declutter.xml.tpl         # Reference-only Task Scheduler XML (Install.ps1 doesn't import this)
 └── Modules/
@@ -37,6 +38,7 @@ platforms/windows/
 | `Harden.ps1` | Params: `-DryRun` `-EnableRdpHardening` `-SshPort`. Firewall default-deny inbound + logging; RDP NLA via `HKLM:...\Terminal Server\WinStations\RDP-Tcp\UserAuthentication`; OpenSSH Server hardening ONLY if `Get-WindowsCapability OpenSSH.Server*` reports Installed | Backup-before-mutate pattern for `sshd_config` (`$sshdConfigPath.twdxos-backup`) — the Windows-specific exception to the other platforms' drop-in convention, since Windows' OpenSSH build has no `Include` directory mechanism |
 | `Declutter.ps1` | `[CmdletBinding(SupportsShouldProcess=$true)]`, params `-Apply` `-DryRun`. Cleans `$env:TEMP`/`$env:WINDIR\Temp` (>10 days old), Windows Update download cache (stops/restarts `wuauserv`), runs `Dism.exe /Online /Cleanup-Image /StartComponentCleanup`, checks two registry keys for reboot-pending state | Logs to `$env:ProgramData\TWDxOSOptimisation\Logs\declutter-<timestamp>.log` |
 | `Configs/ScheduledTask-Declutter.xml.tpl` | Placeholders: `__CLEANUP_HOUR__` `__CLEANUP_MINUTE__` `__SCRIPT_PATH__`. Reference only — `Install.ps1` builds the task programmatically, not by importing this file | — |
+| `PSScriptAnalyzerSettings.psd1` | Excludes `PSAvoidUsingWriteHost` repo-wide for this folder — these are interactive admin CLI scripts where colored `Write-Host` output is the intended UX (the PowerShell equivalent of the Bash platforms' colored `echo` palette), not an oversight. Used by both the CI job and the local lint command below | — |
 
 ## Conventions (PowerShell equivalents of the Bash platforms' conventions)
 
@@ -61,7 +63,7 @@ platforms/windows/
 
 ```powershell
 # Lint locally (matches CI - PSScriptAnalyzer)
-Invoke-ScriptAnalyzer -Path . -Recurse -Severity Warning,Error
+Invoke-ScriptAnalyzer -Path . -Recurse -Severity Warning,Error -Settings PSScriptAnalyzerSettings.psd1
 
 # Preview without applying
 .\Install.ps1 -DryRun

@@ -238,7 +238,7 @@ if [[ -n "$WP_PATH" ]]; then
         dry_run "install verified modules/wp-auto-update.sh.tpl → /usr/local/bin/wp-auto-update.sh"
         dry_run "schedule via launchd LaunchAgent com.twdxos.wp-auto-update"
     else
-        if ! sudo -u "$TARGET_USER" command -v wp &>/dev/null; then
+        if ! sudo -u "$TARGET_USER" bash -c 'command -v wp' &>/dev/null; then
             sudo -u "$TARGET_USER" brew install wp-cli || \
                 warn "Could not install wp-cli via Homebrew — install it manually and re-run."
         fi
