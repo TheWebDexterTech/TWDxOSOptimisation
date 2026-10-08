@@ -41,8 +41,8 @@ Run this as your normal admin user via `sudo` (not from a root shell) — the in
 
 > **v2.0.0:** `declutter.sh --cron` is now report-only for orphaned launch
 > agents/daemons, and no longer auto-runs `brew upgrade --formula` /
-> `brew autoremove` / `mas upgrade` (still offered interactively). See
-> [`CHANGELOG.md`](../../CHANGELOG.md).
+> `brew autoremove` / `mas upgrade` (still offered interactively). See the
+> [v2.0.0 PR](https://github.com/TheWebDexterTech/TWDxOSOptimisation/pull/12).
 
 ## Dry-Run Mode
 

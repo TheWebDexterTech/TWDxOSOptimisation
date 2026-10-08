@@ -23,21 +23,19 @@ Each does some combination of: unattended OS **security** updates, intrusion pre
 
 ### Enterprise CLI contract (v2.0.0)
 
-Every `install` / `harden` / `declutter` / `uninstall` script accepts:
+| Flag | Bash `install` | Bash `harden` | Bash `uninstall` | Bash `declutter` | Windows (all scripts) |
+|---|---|---|---|---|---|
+| `--dry-run` / `--check` | ✓ | ✓ | ✓ | report-only unless `--apply` | `-DryRun` |
+| `--json` — single-line JSON result on stdout, logs on stderr | ✓ | ✓ | ✓ | ✓ | `-Json` |
+| `--non-interactive` — never prompt, fail closed | ✓ | ✓ | ✓ | `--cron` | `-NonInteractive` (not Declutter) |
+| `--offline` — use files beside the script (`BUNDLE_DIR`) | ✓ | | | | |
+| `--require-signatures` — minisign check is mandatory | ✓ | | | | |
+| `--strict` — non-interactive (+ signatures for install) | ✓ | ✓ | | | |
+| `--ref <tag\|sha>` — fetch configs from a pinned ref | ✓ | | | | |
 
-| Flag | Effect |
-|---|---|
-| `--dry-run` / `--check` | Preview only |
-| `--json` | Single-line JSON result on stdout; human logs on stderr |
-| `--offline` | No network fetches — run from files beside the script (`BUNDLE_DIR`); honours `HTTP(S)_PROXY` on the online path |
-| `--non-interactive` | Never prompt; fail closed on unresolved decisions |
-| `--require-signatures` | minisign signature check (in addition to SHA-256) is mandatory |
-| `--strict` | `--non-interactive` + `--require-signatures` |
-| `--ref <tag\|sha>` | Fetch configs from a pinned git ref (Bash platforms) |
+Stable exit codes: **0** ok · **2** usage · **3** preflight · **4** partial · **5** integrity (Bash `install` only).
 
-Stable exit codes: **0** ok · **2** usage · **3** preflight · **4** partial · **5** integrity.
-
-See [`CHANGELOG.md`](CHANGELOG.md) for the full v2.0.0 behaviour-change list before upgrading an existing host.
+The full v2.0.0 behaviour-change list is in [the v2.0.0 PR](https://github.com/TheWebDexterTech/TWDxOSOptimisation/pull/12) and the project's TWDxMCP changelog node; the short version: Linux updates are now security-only, needrestart lists instead of restarting, fail2ban whitelists loopback only, and `harden` fails closed when it could lock you out.
 
 ## Optional WordPress module
 
@@ -45,13 +43,13 @@ This project originally shipped as a WordPress-server-specific toolkit (formerly
 
 ## Contributing
 
-Pick the platform folder you care about and read its own `README.md`/`CLAUDE.md`. All shell scripts across the Linux/macOS platforms share a few conventions worth knowing (dry-run mode, drop-in configs, a `FILE_CHECKSUMS` registry for anything fetched over the network) — see any platform's `CLAUDE.md` for the details, or the root `CLAUDE.md` for the project-wide philosophy.
+Pick the platform folder you care about and read its own `README.md`. Architecture, per-file code maps, conventions and the changelog live in the **TWDxMCP** memory server (TheWebDexter's project knowledge base), not in repo docs — `CLAUDE.md` lists the project, workspace and node IDs to load.
 
-`scripts/pre-commit.sh` is a repo-wide commit preflight (ShellCheck across every Bash platform, checksum-drift detection, a staged-diff secret scan) — install it once per clone:
+The commit preflight runs learned checks, ShellCheck across every Bash platform, checksum-drift detection and a staged-diff secret scan. Enable it once per clone:
 
 ```bash
-ln -sf ../../scripts/pre-commit.sh .git/hooks/pre-commit
-chmod +x scripts/pre-commit.sh
+git config core.hooksPath .husky
+bash .claude/scripts/preflight.sh   # full manual run (adds PSScriptAnalyzer when pwsh is installed)
 ```
 
 ## License

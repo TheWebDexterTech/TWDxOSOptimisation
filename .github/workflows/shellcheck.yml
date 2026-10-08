@@ -16,17 +16,30 @@ concurrency:
 
 jobs:
   shellcheck:
-    name: ShellCheck
+    name: ShellCheck + preflight
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: ShellCheck (all scripts)
-        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # v2.0.0
+      # Same script contributors run locally: learned checks, ShellCheck on
+      # every .sh/.sh.tpl (+ .husky/pre-commit), FILE_CHECKSUMS drift.
+      - name: Preflight
+        shell: bash
+        run: |
+          set -o pipefail
+          bash .claude/learned-checks.sh 2>&1 | tee /tmp/ci-lint.log
+          bash scripts/pre-commit.sh 2>&1 | tee -a /tmp/ci-lint.log
+
+      # Self-healing loop (U-004): a pattern that fails CI should only fail CI once.
+      - name: Upload failure log
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          scandir: './'
-          ignore_paths: 'configs platforms/windows'
-          severity: style
-          format: gcc
-          check_together: 'yes'
+          name: ci-failure-log
+          path: /tmp/ci-lint.log
+          retention-days: 7
+
+      - name: Self-healing hint
+        if: failure()
+        run: echo "::notice::Download ci-failure-log and run bash .claude/scripts/learn-from-ci.sh --ci-log combined.log"

@@ -28,8 +28,21 @@ jobs:
           Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
           $results = Invoke-ScriptAnalyzer -Path platforms/windows -Recurse -Severity Warning,Error `
             -Settings platforms/windows/PSScriptAnalyzerSettings.psd1
-          $results | Format-Table -AutoSize
+          $results | Format-Table -AutoSize | Out-String -Width 200 | Tee-Object -FilePath /tmp/ci-lint.log
           if ($results.Count -gt 0) {
             Write-Error "PSScriptAnalyzer found $($results.Count) issue(s)."
             exit 1
           }
+
+      # Self-healing loop (U-004): a pattern that fails CI should only fail CI once.
+      - name: Upload failure log
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-failure-log
+          path: /tmp/ci-lint.log
+          retention-days: 7
+
+      - name: Self-healing hint
+        if: failure()
+        run: echo "::notice::Download ci-failure-log and run bash .claude/scripts/learn-from-ci.sh --ci-log combined.log"

@@ -47,7 +47,7 @@ cd TWDxOSOptimisation\platforms\windows
 > "Windows Update automation" is a real daily task; `Declutter.ps1` removes
 > `Windows.old` via a self-seeded Disk Cleanup profile; `Harden.ps1` adds
 > telemetry / LLMNR / NetBIOS / SMBv1 / Defender / SmartScreen / AutoRun
-> hardening. See [`CHANGELOG.md`](../../CHANGELOG.md).
+> hardening. See the [v2.0.0 PR](https://github.com/TheWebDexterTech/TWDxOSOptimisation/pull/12).
 
 ## Dry-Run Mode
 
