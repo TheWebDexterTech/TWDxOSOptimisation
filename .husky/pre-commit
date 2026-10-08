@@ -1,0 +1,8 @@
+# shellcheck shell=sh
+# TWDxOSOptimisation pre-commit hook (Husky v9 layout, POSIX sh only).
+# Husky runs hooks with `sh -e`; this repo has no Node toolchain, so the hook
+# is activated with `git config core.hooksPath .husky` instead of `npx husky`.
+set -eu
+
+bash .claude/learned-checks.sh
+bash scripts/pre-commit.sh

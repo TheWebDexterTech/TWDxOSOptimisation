@@ -15,9 +15,8 @@
 # This script is generic across platforms — adding a new platform folder
 # with its own install.sh/FILE_CHECKSUMS requires zero edits here.
 #
-# One-time install:
-#   ln -sf ../../scripts/pre-commit.sh .git/hooks/pre-commit
-#   chmod +x scripts/pre-commit.sh
+# Runs from .husky/pre-commit (enable once per clone):
+#   git config core.hooksPath .husky
 #
 # Or run manually any time:
 #   bash scripts/pre-commit.sh
@@ -36,9 +35,10 @@ cd "$REPO_ROOT"
 
 # ── 1. ShellCheck ────────────────────────────────────────────────────────────
 # Recurses into every Bash-based platform folder (Windows ships PowerShell,
-# not Bash, so platforms/windows is naturally excluded by the *.sh glob).
+# not Bash, so platforms/windows is naturally excluded by the *.sh glob),
+# plus the repo tooling in scripts/, .claude/ and .husky/pre-commit.
 step "ShellCheck"
-mapfile -t sh_files < <(find platforms scripts -type f \( -name '*.sh' -o -name '*.sh.tpl' \) 2>/dev/null | sort)
+mapfile -t sh_files < <({ find platforms scripts .claude -type f \( -name '*.sh' -o -name '*.sh.tpl' \) 2>/dev/null; [[ -f .husky/pre-commit ]] && echo .husky/pre-commit; } | sort)
 if ((${#sh_files[@]} == 0)); then
     fail "no shell scripts found under platforms/ or scripts/ — check the working tree"
 fi

@@ -1,10 +1,7 @@
-.DS_Store
-*.swp
-*.swo
-*~
-.claude/
+.claude/settings.local.json
 dist/
 node_modules/
+coverage/
 semgrep-findings.json
 
 # Windows — NTFS alternate-data-stream marker left on browser-downloaded files

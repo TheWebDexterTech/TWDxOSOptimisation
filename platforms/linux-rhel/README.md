@@ -38,7 +38,7 @@ Idempotent — safe to re-run. Every fetched file is verified against a SHA256 d
 
 `--json` · `--offline` (with `BUNDLE_DIR`) · `--non-interactive` · `--require-signatures` · `--strict` · `--ref <tag|sha>` · env toggles `ENABLE_DNF_AUTOMATIC` / `ENABLE_FAIL2BAN` / `ENABLE_NEEDRESTART` / `ENABLE_AUTO_REBOOT` / `ENABLE_TIMESYNC` / `ENABLE_JOURNALD_TUNING`. Exit codes: `0` ok · `2` usage · `3` preflight · `4` partial · `5` integrity.
 
-> **v2.0.0 changed defaults** — `dnf-automatic` is now security-only, `needrestart` is list-only, `fail2ban` `ignoreip` is loopback-only, and the WP module installs **only when `WP_PATH` is set**. See [`CHANGELOG.md`](../../CHANGELOG.md).
+> **v2.0.0 changed defaults** — `dnf-automatic` is now security-only, `needrestart` is list-only, `fail2ban` `ignoreip` is loopback-only, and the WP module installs **only when `WP_PATH` is set**. See the [v2.0.0 PR](https://github.com/TheWebDexterTech/TWDxOSOptimisation/pull/12).
 
 ## Manual Install (clone repository)
 

@@ -1,20 +1,26 @@
-# Files Claude Code should exclude from its file index.
-# Keep this list narrow — only files that are actively noisy or never
-# relevant to code work belong here. See CLAUDE.md for what each script does.
+# Files Claude Code should exclude from its file index (U-001).
+# Project knowledge lives in TWDxMCP — see CLAUDE.md.
 
-# Root-level user-facing docs — pure pitch/hub content, repeated in the root
-# CLAUDE.md, not implementation. Anchored with a leading "/" so this does NOT
-# match platforms/*/README.md — those carry real per-platform env-var/usage
-# spec content that IS relevant when working inside a platform folder.
 /LICENSE
 /README.md
-
-# Non-functional repo metadata
 .github/FUNDING.yml
 .github/dependabot.yml
 
-# Tooling output / local-only state (also gitignored)
-semgrep-findings.json
-.claude/
+# Tooling output / local-only state, lock files, binaries
 node_modules/
 dist/
+coverage/
+.wrangler/
+*.lock
+package-lock.json
+semgrep-findings.json
+.claude/settings.local.json
+*.minisig
+*.png
+*.jpg
+*.zip
+*.tar.gz
+.DS_Store
+*.swp
+*.swo
+*~

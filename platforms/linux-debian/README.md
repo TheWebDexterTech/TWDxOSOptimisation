@@ -23,8 +23,8 @@ This is the original project (formerly `TWDxWordPressServerSecurity`), now livin
 | Update WP core, plugins, themes + DB optimize | WP-CLI + cron (`flock`) | **Only when `WP_PATH` is set** |
 
 > **v2.0.0 changed several defaults** (security-only updates, `needrestart`
-> list-only, fail2ban loopback-only, WP opt-in). See the repo
-> [`CHANGELOG.md`](../../CHANGELOG.md) before re-running on an existing host.
+> list-only, fail2ban loopback-only, WP opt-in). See the
+> [v2.0.0 PR](https://github.com/TheWebDexterTech/TWDxOSOptimisation/pull/12) before re-running on an existing host.
 
 ---
 
